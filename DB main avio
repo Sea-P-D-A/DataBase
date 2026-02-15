@@ -1,0 +1,1597 @@
+/*
+
+База данных авиакомпании
+
+Спроектировать БД для авиакомпании.
+В БД должна храниться информация о сотрудниках компании (фамилия, имя, отчество, дата рождения, 
+паспортные данные, телефон, адрес (страна, город, улица, дом и квартира), должность,стаж).
+
+Большая доля сотрудников является членами экипажей 
+(командиры, вторые пилоты, бортинженеры, стюардессы и т. д.). Сотрудник может состоять только в одном экипаже.
+Данные об экипаже включают в себя его состав (кто из сотрудников входит в
+экипаж) и зону полета (международные перевозки, внутренние
+перевозки). Один экипаж может работать на разных рейсах, но один рейс осуществляет один экипаж. 
+
+Информация об авиарейсах включает пункт вылета, пункт
+прибытия, дату и время вылета, дату и время прибытия, самолет,
+экипаж. К данным пунктов вылета и прибытия содержат страну,
+город, аэропорт. 
+
+Каждый самолет имеет уникальный бортовой номер, период
+эксплуатации, год выпуска, тип. Для типа указываются марка,
+дальность полета, число пассажирских мест в каждом классе, максимальная высота полета, крейсерская скорость,
+максимальная взлетная масса. 
+
+В БД должна фиксироваться информация о проданных билетах и пассажирах. Данные билета: рейс, стоимость,
+ряд, место, класс, пассажир, тип и вес багажа.
+Информация о пассажирах содержит фамилию, имя, отчество, паспортные данные, дату рождения.
+
+*/
+
+DROP TABLE  IF EXISTS strit CASCADE;
+CREATE TABLE strit (
+id_strit SERIAL PRIMARY KEY, 
+name_strit VARCHAR(20) NOT NULL
+
+    CONSTRAINT check_strit_name_length 
+        CHECK (LENGTH(name_strit) >= 3)  -- Название не короче 3 символов
+);
+
+DROP TABLE  IF EXISTS city CASCADE;
+CREATE TABLE city (
+id_city SERIAL PRIMARY KEY, 
+name_city VARCHAR(20) NOT NULL
+
+    CONSTRAINT check_city_name_length 
+        CHECK (LENGTH(name_city) >= 3)--,  -- Название не короче 3 символов
+--    CONSTRAINT unique_city_name 
+--        UNIQUE (name_city)  -- Города с одинаковыми именами запрещены
+);
+
+DROP TABLE  IF EXISTS countrie CASCADE;
+CREATE TABLE countrie (
+id_countrie SERIAL PRIMARY KEY, 
+name_countrie VARCHAR(20) NOT NULL
+
+    CONSTRAINT check_countrie_name_length 
+        CHECK (LENGTH(name_countrie) >= 3),  -- Название не короче 3 символов
+    CONSTRAINT unique_countrie_name 
+        UNIQUE (name_countrie)  -- Страны с одинаковыми именами запрещены
+);
+
+DROP TABLE  IF EXISTS employee CASCADE;
+CREATE TABLE employee (
+id_employee SERIAL PRIMARY KEY, 
+name_employee VARCHAR(20) NOT NULL,
+surename_employee VARCHAR(20),
+surename2_employee VARCHAR(20),
+data_of_birth DATE NOT NULL,
+passport_series INTEGER NOT NULL,
+passport_number INTEGER NOT NULL,
+phone_series VARCHAR(20),
+expriense DATE NOT NULL,
+apartament_number INTEGER NOT NULL,
+
+	CONSTRAINT uk_employee_passport
+		UNIQUE (passport_series, passport_number),
+	CONSTRAINT uk_employee_phone
+		UNIQUE (phone_series),
+	CONSTRAINT chk_employee_passport_series
+		CHECK (passport_series BETWEEN 1000 AND 9999),
+	CONSTRAINT chk_employee_passport_number
+		CHECK (passport_number BETWEEN 100000 AND 999999),
+	CONSTRAINT chk_employee_apartment
+		CHECK (apartament_number > 0)
+);
+
+DROP TABLE  IF EXISTS airport CASCADE;
+CREATE TABLE airport (
+id_airport SERIAL PRIMARY KEY, 
+name_airport VARCHAR(20) NOT NULL
+);
+
+DROP TABLE  IF EXISTS job CASCADE;
+CREATE TABLE job (
+id_job SERIAL PRIMARY KEY, 
+name_job VARCHAR(20) NOT NULL
+);
+
+DROP TABLE  IF EXISTS compount_sostav CASCADE;
+CREATE TABLE compount_sostav (
+id_compount_sostav SERIAL PRIMARY KEY, 
+reception_time DATE NOT NULL,
+disbanded_time DATE NOT NULL,
+    CONSTRAINT chk_valid_time_range 
+        CHECK (disbanded_time >= reception_time)
+);
+
+DROP TABLE  IF EXISTS compount CASCADE;
+CREATE TABLE compount (
+id_crew SERIAL PRIMARY KEY
+);
+
+DROP TABLE  IF EXISTS zonefly CASCADE;
+CREATE TABLE zonefly (
+id_zonefly SERIAL PRIMARY KEY, 
+description VARCHAR(20) NOT NULL
+);
+
+DROP TABLE  IF EXISTS flit CASCADE;
+CREATE TABLE flit (
+id_flit SERIAL PRIMARY KEY, 
+departure_date DATE NOT NULL,
+arrival_date DATE,
+    -- Проверка, что дата прибытия не раньше даты отправления
+    CONSTRAINT chk_valid_dates 
+        CHECK (arrival_date IS NULL OR arrival_date >= departure_date)
+);
+
+DROP TABLE  IF EXISTS flyer CASCADE;
+CREATE TABLE flyer (
+tail_number VARCHAR(7) PRIMARY KEY, 
+year_manufacture DATE NOT NULL,
+operating_time_in_hours INTEGER,
+
+	CONSTRAINT chk_time_in_hours
+        CHECK(operating_time_in_hours > 1000)
+);
+
+DROP TABLE  IF EXISTS typess CASCADE;
+CREATE TABLE typess (
+id_types SERIAL PRIMARY KEY, 
+description VARCHAR(20) NOT NULL,
+flight_range_in_km INTEGER NOT NULL,
+max_flight_altitude INTEGER NOT NULL,
+number_passengers INTEGER ,
+cruising_speed INTEGER NOT NULL,
+max_takeoff_weight INTEGER NOT NULL,
+
+    CONSTRAINT chk_flight_range
+        CHECK(flight_range_in_km >= 100),
+    CONSTRAINT chk_altitude_range
+        CHECK(max_flight_altitude >= 2000 AND max_flight_altitude <= 12000),
+	CONSTRAINT chk_number_passager
+		CHECK(number_passengers >= 0 AND number_passengers < 2000),
+	CONSTRAINT chk_cruising_speed
+		CHECK(cruising_speed >= 0 AND cruising_speed < 9000),
+	CONSTRAINT chk_takeoff_weight
+		CHECK(max_takeoff_weight >= 0 AND max_takeoff_weight < 600)
+);
+
+DROP TABLE  IF EXISTS ticket CASCADE;
+CREATE TABLE ticket (
+id_ticket SERIAL PRIMARY KEY, 
+price INTEGER NOT NULL,
+roww INTEGER NOT NULL,
+place INTEGER NOT NULL,
+classs INTEGER NOT NULL,
+
+    -- Цена не может быть отрицательной или нулевой
+    CONSTRAINT chk_positive_price 
+        CHECK (price > 0),
+    
+    -- Ряд и место должны быть положительными числами
+    CONSTRAINT chk_valid_row 
+        CHECK (roww > 0),
+    CONSTRAINT chk_valid_place 
+        CHECK (place > 0),
+    
+    -- Ограничение на класс
+    CONSTRAINT chk_valid_class 
+        CHECK (classs BETWEEN 1 AND 3)
+);
+
+DROP TABLE  IF EXISTS passenger CASCADE;
+CREATE TABLE passenger (
+id_passenger SERIAL PRIMARY KEY, 
+passport_serial INTEGER NOT NULL,
+passport_number INTEGER NOT NULL,
+number_phone VARCHAR(20) NOT NULL,
+namee VARCHAR(20) NOT NULL,
+data_of_birth DATE NOT NULL,
+surname VARCHAR(20),
+surname2 VARCHAR(20),
+
+    -- Уникальная комбинация паспортных данных
+    CONSTRAINT uk_passport_data 
+        UNIQUE (passport_serial, passport_number),
+    
+    -- Проверка серии паспорта (4 цифры)
+    CONSTRAINT chk_passport_serial 
+        CHECK (passport_serial BETWEEN 1000 AND 9999),
+    
+    -- Проверка номера паспорта (6 цифр)
+    CONSTRAINT chk_passport_number 
+        CHECK (passport_number BETWEEN 100000 AND 999999)
+);
+
+DROP TABLE  IF EXISTS baggage CASCADE;
+CREATE TABLE baggage (
+id_baggage SERIAL PRIMARY KEY, 
+weight FLOAT NOT NULL
+
+	CONSTRAINT chk_positive_weight
+		CHECK(weight > 0)
+);
+
+DROP TABLE  IF EXISTS typeb CASCADE;
+CREATE TABLE typeb (
+id_type SERIAL PRIMARY KEY, 
+description VARCHAR(20) NOT NULL
+);
+
+
+
+
+-- Добавляем столбец city_id в strit (для связи)
+ALTER TABLE strit
+ADD COLUMN city_id INTEGER NOT NULL;
+-- Создаем связь "один-ко-многим" (город → улицы)
+ALTER TABLE strit
+ADD CONSTRAINT fk_strit_city
+    FOREIGN KEY (city_id) 
+    REFERENCES city(id_city)
+    ON DELETE CASCADE;  -- Удаляем улицы при удалении города
+-- Добавляем уникальность сочетания улица+город
+ALTER TABLE strit
+ADD CONSTRAINT unique_strit_in_city 
+    UNIQUE (name_strit, city_id);
+
+-- Добавляем столбец countrie_id в city
+ALTER TABLE city
+ADD COLUMN countrie_id INTEGER NOT NULL;
+-- -- Создаем связь "один-ко-многим" (страна → город)
+ALTER TABLE city
+ADD CONSTRAINT fk_city_countrie
+    FOREIGN KEY (countrie_id) 
+    REFERENCES countrie(id_countrie)
+    ON DELETE CASCADE;
+-- Добавляем уникальность сочетания город+страна
+ALTER TABLE city
+ADD CONSTRAINT unique_city_in_countrie 
+    UNIQUE (name_city, countrie_id);
+
+-- Добавляем столбец id_job в employee
+ALTER TABLE employee
+ADD COLUMN id_job INTEGER;
+-- Добавляем столбец id_street в employee
+ALTER TABLE employee
+ADD COLUMN id_strit INTEGER;
+-- 1. Добавляем внешний ключ БЕЗ UNIQUE (разрешаем дубли id_job) "многие-к-одному"
+ALTER TABLE employee
+ADD CONSTRAINT fk_employee_job 
+    FOREIGN KEY (id_job) 
+    REFERENCES job(id_job)
+    ON DELETE SET NULL;  -- Запрещаем удалять должности, которые используются
+-- Добавляем связь "многие-к-одному" (много сотрудников → одна улица)
+ALTER TABLE employee
+ADD CONSTRAINT fk_employee_strit
+    FOREIGN KEY (id_strit) 
+    REFERENCES strit(id_strit)
+    ON DELETE SET NULL;  -- При удалении улицы у сотрудников id_street станет NULL
+
+-- Добавляем столбец id_city в airport
+ALTER TABLE airport
+ADD COLUMN id_city INTEGER;
+-- Добавляем связь "многие-к-одному"
+ALTER TABLE airport
+ADD CONSTRAINT fk_airport_city
+	FOREIGN KEY(id_city)
+	REFERENCES city(id_city)
+	ON DELETE SET NULL;
+ALTER TABLE airport
+ADD CONSTRAINT unique_airport_in_city 
+    UNIQUE (name_airport, id_city);
+
+
+-- Добавляем столбец id_employee в compount_sostav
+ALTER TABLE compount_sostav
+ADD COLUMN id_employee INTEGER;
+-- Добавляем столбец id_crew в compount_sostav
+ALTER TABLE compount_sostav
+ADD COLUMN id_crew INTEGER;
+-- Добавляем связь "многие-к-одному"
+ALTER TABLE compount_sostav
+ADD CONSTRAINT fk_compount_sostav_employee
+	FOREIGN KEY (id_employee)
+	REFERENCES employee(id_employee)
+	ON DELETE SET NULL;
+-- Добавляем связь "многие-к-одному"
+ALTER TABLE compount_sostav
+ADD CONSTRAINT fk_compount_sostav_compount
+	FOREIGN KEY (id_crew)
+	REFERENCES compount(id_crew)
+	ON DELETE SET NULL;
+
+-- Добавляем столбец id_zonefly в compount
+ALTER TABLE compount
+ADD COLUMN id_zonefly INTEGER;
+-- Добавляем связь "многие-к-одному"
+ALTER TABLE compount
+ADD CONSTRAINT fk_compount_zonefly
+	FOREIGN KEY (id_zonefly)
+	REFERENCES zonefly(id_zonefly)
+	ON DELETE SET NULL;
+
+----FLIT----
+ALTER TABLE flit
+ADD COLUMN id_crew INTEGER;
+ALTER TABLE flit
+ADD COLUMN id_landing_airport INTEGER;
+ALTER TABLE flit
+ADD COLUMN id_departure_airport INTEGER;
+ALTER TABLE flit
+ADD COLUMN id_flyer VARCHAR(7);
+
+ALTER TABLE flit
+ADD CONSTRAINT fk_flit_compount
+	FOREIGN KEY (id_crew)
+	REFERENCES compount(id_crew)
+	ON DELETE SET NULL;
+ALTER TABLE flit
+ADD CONSTRAINT fk_flit_airport1
+	FOREIGN KEY (id_landing_airport)
+	REFERENCES airport(id_airport)
+	ON DELETE SET NULL;
+ALTER TABLE flit
+ADD CONSTRAINT fk_flit_airport2
+	FOREIGN KEY (id_departure_airport)
+	REFERENCES airport(id_airport)
+	ON DELETE SET NULL;
+ALTER TABLE flit
+ADD CONSTRAINT fk_flit_flyer
+	FOREIGN KEY (id_flyer)
+	REFERENCES flyer(tail_number)
+	ON DELETE SET NULL;
+
+----flayer----
+ALTER TABLE flyer
+ADD COLUMN id_type INTEGER;
+
+ALTER TABLE flyer
+ADD CONSTRAINT fk_flyer_type
+	FOREIGN KEY (id_type)
+	REFERENCES typess(id_types)
+	ON DELETE SET NULL;
+
+----ticket----
+
+ALTER TABLE ticket
+ADD COLUMN id_flit INTEGER;
+ALTER TABLE ticket
+ADD COLUMN id_passenger INTEGER;
+
+ALTER TABLE ticket
+ADD CONSTRAINT fk_ticket_flyer
+	FOREIGN KEY (id_flit)
+	REFERENCES flit(id_flit)
+	ON DELETE SET NULL;
+ALTER TABLE ticket
+ADD CONSTRAINT fk_ticket_passenger
+	FOREIGN KEY (id_passenger)
+	REFERENCES passenger(id_passenger)
+	ON DELETE SET NULL;
+
+----baggage----
+ALTER TABLE baggage
+ADD COLUMN id_type INTEGER;
+ALTER TABLE baggage
+ADD COLUMN id_ticket INTEGER;
+
+ALTER TABLE baggage
+ADD CONSTRAINT fk_baggage_typeb
+	FOREIGN KEY (id_type)
+	REFERENCES typeb(id_type)
+	ON DELETE SET NULL;
+ALTER TABLE baggage
+ADD CONSTRAINT fk_baggage_ticket
+	FOREIGN KEY (id_ticket)
+	REFERENCES ticket(id_ticket)
+	ON DELETE SET NULL;
+
+-- LIMIT 1 ограничивает результат подзапроса одной строкой
+-- LIMIT количество_строк OFFSET пропустить_строк
+
+
+-- Добавляем страны
+INSERT INTO countrie (name_countrie) 
+VALUES 
+('Россия'),
+('Америка'), 
+('Китай'),
+('Германия'),
+('Франция'), 
+('Япония'),
+('Бразилия'),
+('Индия'),
+('Канада'),
+('Италия'),
+('Испания'),
+('Австралия'),
+('Мексика');
+
+-- Добавляем города
+INSERT INTO city (name_city, countrie_id) 
+VALUES 
+-- Россия
+('Москва', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Россия')),
+('Сочи', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Россия')),
+('Калининград', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Россия')),
+
+-- Америка  
+('Лос-Анджелес', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Америка')),
+('Чикаго', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Америка')),
+
+-- Китай
+('Шанхай', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Китай')),
+('Гуанчжоу', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Китай')),
+
+-- Германия
+('Берлин', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Германия')),
+('Мюнхен', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Германия')),
+
+-- Франция
+('Париж', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Франция')),
+('Марсель', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Франция')),
+
+-- Япония
+('Токио', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Япония')),
+('Осака', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Япония')),
+
+-- Бразилия
+('Рио-де-Жанейро', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Бразилия')),
+('Сан-Паулу', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Бразилия')),
+
+-- Индия
+('Дели', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Индия')),
+('Мумбаи', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Индия')),
+
+-- Канада
+('Торонто', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Канада')),
+('Ванкувер', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Канада')),
+
+-- Италия
+('Рим', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Италия')),
+('Милан', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Италия')),
+
+-- Испания
+('Мадрид', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Испания')),
+('Барселона', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Испания')),
+
+-- Австралия
+('Сидней', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Австралия')),
+('Мельбурн', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Австралия')),
+
+-- Мексика
+('Мехико', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Мексика')),
+('Канкун', (SELECT id_countrie FROM countrie WHERE name_countrie = 'Мексика'));
+
+-- Добавляем улицы
+INSERT INTO strit (name_strit, city_id) 
+VALUES 
+('Улица 1', (SELECT id_city FROM city WHERE name_city = 'Москва')),
+('Улица 2', (SELECT id_city FROM city WHERE name_city = 'Сочи')),
+('Улица 3', (SELECT id_city FROM city WHERE name_city = 'Калининград')),
+('Улица 4', (SELECT id_city FROM city WHERE name_city = 'Лос-Анджелес')),
+('Улица 5', (SELECT id_city FROM city WHERE name_city = 'Чикаго')),
+('Улица 6', (SELECT id_city FROM city WHERE name_city = 'Шанхай')),
+('Улица 7', (SELECT id_city FROM city WHERE name_city = 'Гуанчжоу')),
+('Улица 8', (SELECT id_city FROM city WHERE name_city = 'Берлин')),
+('Улица 9', (SELECT id_city FROM city WHERE name_city = 'Мюнхен')),
+('Улица 10', (SELECT id_city FROM city WHERE name_city = 'Париж')),
+('Улица 11', (SELECT id_city FROM city WHERE name_city = 'Марсель')),
+('Улица 12', (SELECT id_city FROM city WHERE name_city = 'Токио')),
+('Улица 13', (SELECT id_city FROM city WHERE name_city = 'Осака')),
+('Улица 14', (SELECT id_city FROM city WHERE name_city = 'Рио-де-Жанейро')),
+('Улица 15', (SELECT id_city FROM city WHERE name_city = 'Сан-Паулу')),
+('Улица 16', (SELECT id_city FROM city WHERE name_city = 'Мумбаи')),
+('Улица 17', (SELECT id_city FROM city WHERE name_city = 'Торонто')),
+('Улица 18', (SELECT id_city FROM city WHERE name_city = 'Ванкувер')),
+('Улица 19', (SELECT id_city FROM city WHERE name_city = 'Рим')),
+('Улица 20', (SELECT id_city FROM city WHERE name_city = 'Милан')),
+('Улица 21', (SELECT id_city FROM city WHERE name_city = 'Мадрид')),
+('Улица 22', (SELECT id_city FROM city WHERE name_city = 'Барселона')),
+('Улица 23', (SELECT id_city FROM city WHERE name_city = 'Сидней')),
+('Улица 24', (SELECT id_city FROM city WHERE name_city = 'Мельбурн')),
+('Улица 25', (SELECT id_city FROM city WHERE name_city = 'Мехико')),
+('Улица 26', (SELECT id_city FROM city WHERE name_city = 'Канкун'));
+
+-- Добавляем должность
+INSERT INTO job (name_job) 
+VALUES 
+('Пилот'),
+('Второй пилот'),
+('Бортпроводник'),
+('Авиадиспетчер'),
+('Кассир'),
+('Администратор'),
+('Уборщик'),
+('Менеджер смены'),
+('Багажный handler'),
+('Старший механик'),
+('Заправщик'),
+('Таможенник'),
+('Пограничник');
+
+-- Заполняем таблицу сотрудников
+INSERT INTO employee (
+    name_employee,
+    surename_employee,
+    surename2_employee,
+    data_of_birth,
+    passport_series,
+    passport_number,
+    phone_series,
+    expriense,
+    apartament_number,
+    id_job,
+    id_strit
+)
+VALUES
+    -- Пилоты (id_job = 1)
+	('Александр', 'Петров', 'Иванович', '1980-05-15', 6001, 600001, '791000001', '2005-03-10', 25, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 1')),
+	
+	('Иван', 'Иванов', NULL, '1981-05-16', 6002, 600002, '791000002', '2005-03-10', 24, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 2')),
+	
+	('Александр', NULL, 'Петров', '1982-05-17', 6003, 600003, '791000003', '2005-03-10', 23, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 3')),
+	
+	('Александр', NULL, NULL, '1958-05-18', 6004, 600004, '791000004', '2005-03-10', 22, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 4')),
+	
+	('Петр', 'Петров', 'Иванович', '1980-05-19', 6005, 600005, NULL, '2005-03-10', 21, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 5')),
+	
+	('Антон', NULL, 'Андреевич', '1980-05-20', 6006, 600006, '791000006', '2005-03-10', 20, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 6')),
+	
+	('Жан Поль', 'Анитов', 'Поль', '1980-05-4', 6007, 600007, '791000007', '2005-03-10', 26, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 7')),
+	
+	('Пан Пин', 'Петрёв', NULL, '1980-04-15', 6008, 600008, '791000008', '2005-03-10', 27, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 8')),
+	
+	('Пин понг', 'Лин', 'Степанов', '1980-05-15', 6009, 600009, '791000009', '2005-03-10', 28, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 9')),
+
+	('сон сын', 'Петров', 'Иванович', '1980-05-15', 6011, 600011, '791000011', '2005-03-10', 25, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 1')),
+	
+    ('Александр', 'Петров', 'Александров', '1980-05-15', 6010, 600010, '791000010', '2005-03-10', 29, 
+	(SELECT id_job FROM job WHERE name_job = 'Пилот'),
+	(SELECT id_strit FROM strit WHERE name_strit = 'Улица 10'));
+
+-- Заполняем таблицу пассажиров
+INSERT INTO passenger (
+    passport_serial,
+    passport_number, 
+    number_phone,
+    namee,
+    surname,
+    surname2,
+	data_of_birth
+)
+VALUES
+    (1234, 567890, 79111234567, 'Иван', 'Иванов', 'Иванович', '1970-05-15'),
+    (2345, 678901, 79117654321, 'Мария', 'Петрова', 'Сергеевна', '1980-05-15'),
+    (3456, 789012, 79119876543, 'Алексей', 'Сидоров', 'Владимирович', '1980-05-15'),
+    (4567, 890123, 79112345678, 'Дмитрий', 'Кузнецов', 'Петрович', '1980-05-15'),
+    (5678, 901234, '79118765432', 'Ольга', 'Смирнова', 'Александровна', '1980-05-15'),
+    (6789, 123450, '79115678901', 'Артем', 'Попов', NULL, '1980-05-15'),
+    (7890, 234561, '79116789012', 'Екатерина', 'Васильева', NULL, '1980-05-15'),
+    (8901, 345672, '79117890123', 'Сергей', 'Федоров', NULL, '1980-05-15'),
+    (9012, 456783, '12015551234', 'Джон', 'Смит', NULL, '1980-05-15'),
+    (1123, 567894, '12015552345', 'Эмили', 'Джонсон', NULL, '1980-05-15'),
+    (2234, 678905, '12015553456', 'Майкл', 'Браун', NULL, '1980-05-15'),
+    (3345, 789016, '12015554567', 'Сара', 'Дэвис', NULL, '1980-05-15'),
+    (4456, 890127, '12015555678', 'Джеймс', 'Уилсон', NULL, '1980-05-15'),
+    (5567, 901238, '12015556789', 'Дженнифер', 'Миллер', NULL, '1980-05-15'),
+    (6678, 123489, '861381234567', 'Вей', NULL, NULL, '1980-05-15'),
+    (7789, 234590, '33123456789', 'Мари', NULL, NULL, '1980-05-15'),
+    (8890, 345601, '390123456789', 'Джузеппе', NULL, NULL, '1980-05-15'),
+	(8490, 245601, '390123456789', 'Джу зеппе', 'кирёв', NULL, '1980-05-15'),
+
+    (9901, 456712, '81123456789', 'Юки', NULL, NULL, '2025-09-15');
+
+-- Заполняем таблицу типов самолетов
+INSERT INTO typess (description, flight_range_in_km, max_flight_altitude, number_passengers, cruising_speed, max_takeoff_weight)
+VALUES 
+('Boeing 737', 5000, 10000, 180, 850, 500),
+('Airbus A320', 6000, 11000, 200, 870, 550),
+('Boeing +е67', 12000, 12000, 350, 900, 599),
+('Airbus A380', 12000, 12000, 550, 900, 598),
+('Boeing 911', 3000, 8000, NULL, 800, 400),
+('Boeing 821', 3100, 8000, NULL, 800, 400),  
+('Airbus A38', 4000, 10000, 98, 830, 450);
+
+-- Заполняем таблицу самолетов
+INSERT INTO flyer (tail_number, year_manufacture, operating_time_in_hours, id_type)
+VALUES
+('RA12345', '2010-01-01', 15000, (SELECT id_types FROM typess WHERE description = 'Boeing 737')),
+('RA67890', '2012-03-15', 12000, (SELECT id_types FROM typess WHERE description = 'Airbus A320')),
+('RA11111', '2015-05-20', 8000, (SELECT id_types FROM typess WHERE description = 'Boeing 777')),
+('RA22222', '2018-07-10', 5000, (SELECT id_types FROM typess WHERE description = 'Airbus A380')),
+('RA33333', '2016-09-05', 6000, (SELECT id_types FROM typess WHERE description = 'Тип без вместимости')),
+('RA44444', '2019-11-20', 3000, (SELECT id_types FROM typess WHERE description = 'Сухой Суперджет'));
+
+-- Заполняем таблицу аэропорты
+INSERT INTO airport (name_airport, id_city) 
+VALUES 
+('Шереметьево', (SELECT id_city FROM city WHERE name_city = 'Москва')),
+('Пулково', (SELECT id_city FROM city WHERE name_city = 'Сочи')),
+('Домодедово', (SELECT id_city FROM city WHERE name_city = 'Москва')),
+('Внуково', (SELECT id_city FROM city WHERE name_city = 'Москва')),
+('LOSAnt', (SELECT id_city FROM city WHERE name_city = 'Париж'));
+
+
+-- Заполняем таблицу зоны полетов
+INSERT INTO zonefly (description) 
+VALUES 
+('Международные'),
+('Внутренние');
+
+-- Заполняем таблицу экипажи
+INSERT INTO compount (id_zonefly) 
+VALUES 
+((SELECT id_zonefly FROM zonefly WHERE description = 'Международные')),
+((SELECT id_zonefly FROM zonefly WHERE description = 'Внутренние'));
+
+-- Заполняем таблицу рейсы -- сделать поддзапросы
+INSERT INTO flit (departure_date, arrival_date, id_crew, id_departure_airport, id_landing_airport, id_flyer)
+VALUES
+
+-- LIMIT 1 ограничивает результат подзапроса одной строкой
+-- Рейс 1: Москва (Шереметьево) → Сочи (Пулково)
+(
+    '2024-01-15', 
+    '2024-01-15', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Пулково'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA12345')
+),
+(
+    '2024-01-16',  -- Та же дата, что и существующий рейс
+    '2024-01-16', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1 OFFSET 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Пулково'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA33333')
+),
+(
+    '2024-01-20', 
+    '2024-01-20', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'LOSAnt'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA12345')
+),
+-- Международный рейс 8: Москва → Лос-Анджелес (2024-01-20)
+(
+    '2024-01-20', 
+    '2024-01-20', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1 OFFSET 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'LOSAnt'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA67890')
+),
+-- Международный рейс 9: Москва → Токио (2024-01-20)
+(
+    '2024-01-20', 
+    '2024-01-20', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'LOSAnt'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA11111')
+),
+-- Рейс 1: Москва (Шереметьево) → Париж (LOSAnt)
+(
+    '2024-01-15', 
+    '2024-01-15', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'LOSAnt'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA12345')
+),
+-- Рейс 2: Сочи (Пулково) → Москва (Шереметьево)
+(
+    '2024-01-16', 
+    '2024-01-16', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Пулково'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA67890')
+),
+-- Рейс 3: Сегодняшний рейс
+(
+    CURRENT_DATE, 
+    CURRENT_DATE + INTERVAL '2 hours', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Пулково'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA11111')
+),
+-- Рейс 4: Международный рейс (Москва → Берлин)
+(
+    '2025-11-05', 
+    '2025-11-06', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Международные') LIMIT 1 OFFSET 1),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Домодедово'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA11111')
+),
+-- Рейс 5: Внутренний рейс (Москва → другой аэропорт Москвы)
+(
+    '2024-01-18', 
+    '2024-01-18', 
+    (SELECT id_crew FROM compount WHERE id_zonefly = (SELECT id_zonefly FROM zonefly WHERE description = 'Внутренние')),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Домодедово'),
+    (SELECT id_airport FROM airport WHERE name_airport = 'Внуково'),
+    (SELECT tail_number FROM flyer WHERE tail_number = 'RA22222')
+);
+
+-- Заполняем таблицу билетов
+INSERT INTO ticket (price, roww, place, classs, id_flit, id_passenger)
+VALUES
+(15000, 5, 2, 1, (SELECT id_flit FROM flit ORDER BY id_flit LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger LIMIT 1)),
+(25000, 3, 1, 2, (SELECT id_flit FROM flit ORDER BY id_flit LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 1 LIMIT 1)),
+(45000, 1, 4, 3, (SELECT id_flit FROM flit ORDER BY id_flit LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 2 LIMIT 1)),
+(12000, 10, 3, 1, (SELECT id_flit FROM flit ORDER BY id_flit OFFSET 1 LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 3 LIMIT 1)),
+(28000, 2, 2, 2, (SELECT id_flit FROM flit ORDER BY id_flit OFFSET 1 LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 4 LIMIT 1)),
+(18000, 8, 1, 1, (SELECT id_flit FROM flit ORDER BY id_flit OFFSET 2 LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 5 LIMIT 1)),
+(32000, 4, 3, 2, (SELECT id_flit FROM flit ORDER BY id_flit OFFSET 2 LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 6 LIMIT 1)),
+(22000, 12, 2, 1, (SELECT id_flit FROM flit ORDER BY id_flit OFFSET 3 LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 7 LIMIT 1)),
+(38000, 6, 1, 2, (SELECT id_flit FROM flit ORDER BY id_flit OFFSET 3 LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 8 LIMIT 1)),
+(50000, 1, 1, 3, (SELECT id_flit FROM flit ORDER BY id_flit LIMIT 1), (SELECT id_passenger FROM passenger ORDER BY id_passenger OFFSET 9 LIMIT 1)),
+(35000, 1, 1, 1, 
+    (SELECT id_flit FROM flit WHERE departure_date = '2024-01-20' 
+     AND id_departure_airport = (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево')
+     AND id_landing_airport = (SELECT id_airport FROM airport WHERE name_airport = 'LOSAnt')
+     ORDER BY id_flit LIMIT 1 OFFSET 0),
+    (SELECT id_passenger FROM passenger WHERE surname = 'Иванов' AND namee = 'Иван' AND surname2 = 'Иванович')
+),
+-- Билет на рейс 8 (Москва → Лос-Анджелес)
+(45000, 2, 2, 2,
+    (SELECT id_flit FROM flit WHERE departure_date = '2024-01-20' 
+     AND id_departure_airport = (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево')
+     AND id_landing_airport = (SELECT id_airport FROM airport WHERE name_airport = 'LOSAnt')
+     ORDER BY id_flit LIMIT 1 OFFSET 1),
+    (SELECT id_passenger FROM passenger WHERE surname = 'Иванов' AND namee = 'Иван' AND surname2 = 'Иванович')
+),
+-- Билет на рейс 9 (Москва → Токио)
+(55000, 3, 3, 3,
+    (SELECT id_flit FROM flit WHERE departure_date = '2024-01-20' 
+     AND id_departure_airport = (SELECT id_airport FROM airport WHERE name_airport = 'Шереметьево')
+     AND id_landing_airport = (SELECT id_airport FROM airport WHERE name_airport = 'LOSAnt')
+     ORDER BY id_flit LIMIT 1 OFFSET 2),
+    (SELECT id_passenger FROM passenger WHERE surname = 'Иванов' AND namee = 'Иван' AND surname2 = 'Иванович'));
+
+-- Заполняем таблицу составов
+INSERT INTO compount_sostav (reception_time, disbanded_time, id_employee, id_crew)
+VALUES
+('2024-01-01', '2024-12-31', (SELECT id_employee FROM employee ORDER BY id_employee LIMIT 1 OFFSET 0), (SELECT id_crew FROM compount ORDER BY id_crew LIMIT 1 OFFSET 0)),
+('2024-01-01', '2024-12-31', (SELECT id_employee FROM employee ORDER BY id_employee LIMIT 1 OFFSET 1), (SELECT id_crew FROM compount ORDER BY id_crew LIMIT 1 OFFSET 0)),
+('2024-01-01', '2024-12-31', (SELECT id_employee FROM employee ORDER BY id_employee LIMIT 1 OFFSET 2), (SELECT id_crew FROM compount ORDER BY id_crew LIMIT 1 OFFSET 1)),
+('2024-01-01', '2024-12-31', (SELECT id_employee FROM employee ORDER BY id_employee LIMIT 1 OFFSET 3), (SELECT id_crew FROM compount ORDER BY id_crew LIMIT 1 OFFSET 1));
+
+-- Добавляем типы багажа
+INSERT INTO typeb (description) 
+VALUES 
+('Ручная кладь'),
+('Багаж'),
+('Крупногабаритный');
+
+--DELETE FROM baggage;
+
+-- Добавляем багаж
+INSERT INTO baggage (weight, id_type, id_ticket)
+VALUES
+-- Иванов Иван Иванович - рейс 1
+(8.5, (SELECT id_type FROM typeb WHERE description = 'Ручная кладь'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Иванов' AND p.namee = 'Иван' AND p.surname2 = 'Иванович' AND t.id_flit = 1)),
+(23.2, (SELECT id_type FROM typeb WHERE description = 'Багаж'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Иванов' AND p.namee = 'Иван' AND p.surname2 = 'Иванович' AND t.id_flit = 1)),
+(15.7, (SELECT id_type FROM typeb WHERE description = 'Багаж'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Иванов' AND p.namee = 'Иван' AND p.surname2 = 'Иванович' AND t.id_flit = 1)),
+
+-- Иванов Иван Иванович - рейс 2
+(12.3, (SELECT id_type FROM typeb WHERE description = 'Ручная кладь'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Иванов' AND p.namee = 'Иван' AND p.surname2 = 'Иванович' AND t.id_flit = 2)),
+(18.9, (SELECT id_type FROM typeb WHERE description = 'Багаж'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Иванов' AND p.namee = 'Иван' AND p.surname2 = 'Иванович' AND t.id_flit = 2)),
+
+-- Петрова Мария Сергеевна - рейс 1
+(7.8, (SELECT id_type FROM typeb WHERE description = 'Ручная кладь'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Петрова' AND p.namee = 'Мария' AND p.surname2 = 'Сергеевна' AND t.id_flit = 1)),
+(21.5, (SELECT id_type FROM typeb WHERE description = 'Багаж'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Петрова' AND p.namee = 'Мария' AND p.surname2 = 'Сергеевна' AND t.id_flit = 1)),
+
+-- Сидоров Алексей Владимирович - рейс 3
+(9.2, (SELECT id_type FROM typeb WHERE description = 'Ручная кладь'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Сидоров' AND p.namee = 'Алексей' AND p.surname2 = 'Владимирович' AND t.id_flit = 3)),
+(25.1, (SELECT id_type FROM typeb WHERE description = 'Багаж'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Сидоров' AND p.namee = 'Алексей' AND p.surname2 = 'Владимирович' AND t.id_flit = 3)),
+(32.0, (SELECT id_type FROM typeb WHERE description = 'Крупногабаритный'), 
+ (SELECT t.id_ticket FROM ticket t JOIN passenger p ON t.id_passenger = p.id_passenger 
+  WHERE p.surname = 'Сидоров' AND p.namee = 'Алексей' AND p.surname2 = 'Владимирович' AND t.id_flit = 3));
+
+
+
+
+--1. Выбрать все данные о странах. Результат отсортировать по названию в лексикографическом порядке.
+SELECT * 
+FROM countrie 
+ORDER BY name_countrie;
+
+
+--2. Выбрать названия городов. Результат отсортировать в порядке обратном лексикографическому.
+SELECT name_city 
+FROM city 
+ORDER BY name_city DESC;
+
+
+--3.Выбрать фамилию и инициалы людей в одном столбце,
+/*дату рождения, номер и серию паспорта, телефон. Результат отсортировать
+по году рождения в порядке возрастания, по фамилии
+и имени в порядке обратном лексикографическому, по отчеству в
+лексикографическом порядке. */
+
+-- Сотрудники
+SELECT 
+    CASE 
+        WHEN surename_employee IS NOT NULL AND surename2_employee IS NOT NULL THEN 
+            surename_employee || ' ' || LEFT(name_employee, 1) || '.' || LEFT(surename2_employee, 1) || '.'
+        WHEN surename_employee IS NOT NULL AND surename2_employee IS NULL THEN 
+            surename_employee || ' ' || LEFT(name_employee, 1) || '.'
+        ELSE 
+            name_employee
+    END AS full_name,
+    data_of_birth,
+    passport_series AS passport_serial,
+    passport_number,
+    phone_series AS phone_number,
+    'employee' AS person_type,
+    EXTRACT(YEAR FROM data_of_birth) AS sort_birth_year,
+    surename_employee AS sort_surname,
+    name_employee AS sort_first_name,
+    surename2_employee AS sort_patronymic
+FROM employee
+
+UNION ALL --All убрать лучше наверное
+
+-- Пассажиры
+SELECT 
+    CASE 
+        WHEN surname IS NOT NULL AND surname2 IS NOT NULL THEN 
+            surname || ' ' || LEFT(namee, 1) || '.' || LEFT(surname2, 1) || '.'
+        WHEN surname IS NOT NULL AND surname2 IS NULL THEN 
+            surname || ' ' || LEFT(namee, 1) || '.'
+        ELSE 
+            namee
+    END AS full_name,
+    data_of_birth,
+    passport_serial,
+    passport_number,
+    number_phone AS phone_number,
+    'passenger' AS person_type,
+    EXTRACT(YEAR FROM data_of_birth) AS sort_birth_year,
+    surname AS sort_surname,
+    namee AS sort_first_name,
+    surname2 AS sort_patronymic
+FROM passenger
+
+ORDER BY 
+    sort_birth_year ASC,
+    sort_surname DESC NULLS LAST,
+    sort_first_name DESC NULLS LAST,
+    sort_patronymic ASC NULLS FIRST;
+
+	
+--4. Выбрать все уникальные года рождения людей. Результат
+--отсортировать по годам в порядке убывания - убрать дистинкт без подзапроса
+
+SELECT EXTRACT(YEAR FROM data_of_birth) AS birth_year FROM employee
+UNION
+SELECT EXTRACT(YEAR FROM data_of_birth) AS birth_year FROM passenger
+ORDER BY birth_year DESC;
+
+--5. Выбрать id типа самолета, для которого не указана вместимость. 
+SELECT id_types--, description
+FROM typess 
+WHERE number_passengers IS NULL;
+
+/*6. Выбрать все данные о людях, в фамилиях которых есть
+окончания -ов или -ёв, а имя состоит из двух слов. 
+Результат отсортировать следующим образом: в первую очередь люди с отсут-
+ствующим отчеством, затем – с четным id, в конце – все остальные. */
+
+-- ошибка при case в order by
+SELECT *
+FROM (
+    SELECT 
+        'employee' AS person_type,
+        id_employee AS id,
+        name_employee AS first_name,
+        surename_employee AS surname,
+        surename2_employee AS patronymic,
+        data_of_birth,
+        passport_series AS passport_serial,
+        passport_number,
+        phone_series AS phone_number,
+        -- Специфичные поля сотрудников
+        expriense,
+        apartament_number,
+        id_job,
+        id_strit
+    FROM employee
+    WHERE 
+        (surename_employee LIKE '%ов' OR surename_employee LIKE '%ёв')
+        --AND name_employee LIKE '% %'
+		AND TRIM(name_employee) ~ '^\S+\s+\S+$'
+
+
+    UNION ALL
+
+    SELECT 
+        'passenger' AS person_type,
+        id_passenger AS id,
+        namee AS first_name,
+        surname,
+        surname2 AS patronymic,
+        data_of_birth,
+        passport_serial,
+        passport_number,
+        number_phone AS phone_number,
+        -- Специфичные поля сотрудников как NULL
+        NULL AS expriense,
+        NULL AS apartament_number,
+        NULL AS id_job,
+        NULL AS id_strit
+    FROM passenger
+    WHERE 
+        (surname LIKE '%ов' OR surname LIKE '%ёв')
+        --AND namee LIKE '% %' - TRIM
+		AND TRIM(namee) ~ '^\S+\s+\S+$'  -- Имя состоит из двух слов (без пробелов в начале/конце)
+
+) AS all_people
+ORDER BY 
+    CASE WHEN patronymic IS NULL THEN 0 ELSE 1 END,
+    CASE WHEN id % 2 = 0 THEN 0 ELSE 1 END,
+    id;
+
+--7. Выбрать фамилии, имена, отчества людей в возрасте от
+--60 до 75 лет. 
+
+-- Сотрудники
+SELECT 
+    name_employee AS first_name,
+    surename_employee AS surname,
+    surename2_employee AS patronymic,
+    'employee' AS person_type
+FROM employee
+WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_of_birth)) BETWEEN 60 AND 75
+
+UNION ALL --убрать all может быть
+
+-- Пассажиры
+SELECT 
+    namee AS first_name,
+    surname,
+    surname2 AS patronymic,
+    'passenger' AS person_type
+FROM passenger
+WHERE EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_of_birth)) BETWEEN 60 AND 75;
+
+--8. Выбрать id и фамилии, имена, отчества людей, которые
+--празднуют день рождения в январе, марте, апреле, июле или августе.
+
+-- Сотрудники
+SELECT 
+    id_employee AS id,
+    name_employee AS first_name,
+    surename_employee AS surname, 
+    surename2_employee AS patronymic,
+    'employee' AS person_type
+FROM employee
+WHERE EXTRACT(MONTH FROM data_of_birth) IN (1, 3, 4, 7, 8)
+
+UNION ALL --all убрать от дубликатов ?
+
+-- Пассажиры
+SELECT 
+    id_passenger AS id,
+    namee AS first_name,
+    surname, 
+    surname2 AS patronymic,
+    'passenger' AS person_type
+FROM passenger
+WHERE EXTRACT(MONTH FROM data_of_birth) IN (1, 3, 4, 7, 8);
+
+--9. Выбрать все данные о детях, рожденных в текущем году. 
+SELECT *
+FROM passenger
+WHERE EXTRACT(YEAR FROM data_of_birth) = EXTRACT(YEAR FROM CURRENT_DATE);
+
+/*10. Выбрать модели самолетов, в которых есть хотя бы один
+из следующих символов: «-», «_», «Я», «+», «=». 
+Результат отсортировать в порядке обратном лексикографическому. */
+--разобрать проценты и символы
+SELECT description
+FROM typess
+WHERE description LIKE '%-%' 
+	OR description LIKE '%\_%' ESCAPE '\' -- ищет подчёркивание тк без слеша это любой 1 символ эскейп говорит что слеш 
+	OR description LIKE '%Я%'                -- экранирующий симвл И пропускает его
+   OR description LIKE '%+%' 
+   OR description LIKE '%=%'
+ORDER BY description DESC;
+
+-- переделанные номера 3 4 6 7 8 и flit 
+
+--11. Выбрать среднюю стоимость билета. 
+SELECT AVG(price) AS average_ticket_price 
+FROM ticket;
+
+--12. Выбрать возраст самого пожилого и самого молодого
+--пассажиров. 
+SELECT 
+	MIN(EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_of_birth))) AS min_age,
+    MAX(EXTRACT(YEAR FROM AGE(CURRENT_DATE, data_of_birth))) AS max_age
+FROM passenger;
+
+--13. Выбрать общее количество рейсов, вылетающих сегодня. 
+SELECT COUNT(*) AS FLIT_TO_DAY
+FROM flit
+WHERE (departure_date = CURRENT_DATE);
+
+/*14. Выбрать бортовой номер самолета, модель, дальность и
+вместимость. Результат отсортировать следующим образом: в
+первую очередь самолеты с четным бортовым номером. */
+
+SELECT 
+    f.tail_number AS tail_number,
+    t.description AS description,
+    t.flight_range_in_km AS flight_range_in_km,
+    t.number_passengers AS number_passengers
+FROM flyer f
+JOIN typess t ON f.id_type = t.id_types
+ORDER BY 
+	--извлекает все цифры (+) - 1 и более потом преобразует к числу
+    CASE WHEN CAST(SUBSTRING(f.tail_number FROM '[0-9]+') AS INTEGER) % 2 = 0 THEN 0 ELSE 1 END,
+    f.tail_number;
+	
+/*15. Выбрать название зоны полета, название должности,
+фамилию, имя, отчество, паспортные данные, телефон членов экипажа.
+Результат отсортировать по зоне полета в порядке обратном
+лексикографическому, по номеру экипажа в убывающем порядке,
+по фамилии, имени, отчеству в лексикографическом порядке.*/
+
+SELECT 
+    z.description AS зона_полета,
+    j.name_job AS должность,
+    e.surename_employee AS фамилия,
+    e.name_employee AS имя,
+    e.surename2_employee AS отчество,
+    e.passport_series AS серия_паспорта,
+    e.passport_number AS номер_паспорта,
+    e.phone_series AS телефон,
+    c.id_crew AS номер_экипажа
+FROM employee e
+JOIN job j ON e.id_job = j.id_job
+JOIN compount_sostav cs ON e.id_employee = cs.id_employee
+JOIN compount c ON cs.id_crew = c.id_crew
+JOIN zonefly z ON c.id_zonefly = z.id_zonefly
+ORDER BY 
+    z.description DESC,           -- зона полета
+    c.id_crew DESC,               -- номер экипажа
+    e.surename_employee ASC,      
+    e.name_employee ASC,          
+    e.surename2_employee ASC;     -- отчество
+	
+--16. Выбрать общую массу багажа Иванова Ивана Ивановича
+--с рейса N (значение подставьте сами).
+   
+SELECT 
+    COALESCE(SUM(b.weight), 0) AS общая_масса_багажа, -- COALESCE чтобы если значение было null вернуть ноль
+    COUNT(b.id_baggage) AS количество_мест_багажа
+FROM passenger p
+JOIN ticket t ON p.id_passenger = t.id_passenger
+JOIN flit f ON t.id_flit = f.id_flit
+/*LEFT*/ JOIN baggage b ON t.id_ticket = b.id_ticket
+/*LEFT*/ JOIN airport a_dep ON f.id_departure_airport = a_dep.id_airport
+/*LEFT*/JOIN airport a_arr ON f.id_landing_airport = a_arr.id_airport
+WHERE p.surname = 'Иванов' 
+    AND p.namee = 'Иван' 
+    AND p.surname2 = 'Иванович'
+    AND f.id_flit = 1
+GROUP BY p.surname, p.namee, p.surname2, f.id_flit, a_dep.name_airport, a_arr.name_airport;
+-- left join все из левой таблицы + совпадения
+
+--17. Выбрать все данные рейса и, если рейс совершается из
+--одной страны в другую, то в последнем столбце результирующей
+--таблицы вывести «международный». 
+
+SELECT f.*,
+    CASE
+        WHEN dep_countrie.id_countrie != land_countrie.id_countrie THEN 'Международный'
+        ELSE 'Внутренний'
+    END AS тип_рейса
+FROM flit f
+JOIN airport dep_air ON f.id_departure_airport = dep_air.id_airport
+JOIN airport land_air ON f.id_landing_airport = land_air.id_airport
+JOIN city dep_city ON dep_air.id_city = dep_city.id_city
+JOIN city land_city ON land_air.id_city = land_city.id_city
+JOIN countrie dep_countrie ON dep_city.countrie_id = dep_countrie.id_countrie
+JOIN countrie land_countrie ON land_city.countrie_id = land_countrie.id_countrie;
+
+--18. Выбрать для каждого года количество рейсов по временам года. В результирующей таблице должно быть пять столбцов:
+--год, зима, весна, лето, осень. Результат отсортировать по году в
+--убывающем порядке.
+
+SELECT 
+	EXTRACT(YEAR FROM departure_date) AS год,
+    COUNT(CASE WHEN EXTRACT(MONTH FROM departure_date) IN (12, 1, 2) THEN 1 END) AS зима,
+    COUNT(CASE WHEN EXTRACT(MONTH FROM departure_date) IN (3, 4, 5) THEN 1 END) AS весна,
+    COUNT(CASE WHEN EXTRACT(MONTH FROM departure_date) IN (6, 7, 8) THEN 1 END) AS лето,
+    COUNT(CASE WHEN EXTRACT(MONTH FROM departure_date) IN (9, 10, 11) THEN 1 END) AS осень
+FROM flit
+GROUP BY EXTRACT(YEAR FROM departure_date)
+ORDER BY год desc;
+/*
+19. Выбрать номер рейса, бортовой номер самолета, модель,
+дату вылета, название города вылета, код аэропорта вылета, дату
+прибытия, название города прибытия, код аэропорта прибытия,
+фамилию, имя, отчество пассажира, ряд, сиденье, стоимость, название класса. Результат отсортировать по номеру рейса. */
+
+SELECT 
+    f.id_flit AS номер_рейса,
+    fly.tail_number AS бортовой_номер_самолета,
+    ts.description AS модель_самолета,
+    f.departure_date AS дата_вылета,
+    dep_city.name_city AS город_вылета,
+    dep_air.name_airport AS аэропорт_вылета,
+    f.arrival_date AS дата_прибытия,
+    arr_city.name_city AS город_прибытия,
+    arr_air.name_airport AS аэропорт_прибытия,
+    p.surname AS фамилия_пассажира,
+    p.namee AS имя_пассажира,
+    p.surname2 AS отчество_пассажира,
+    t.roww AS ряд,
+    t.place AS сиденье,
+    t.price AS стоимость,
+    CASE 
+        WHEN t.classs = 1 THEN 'Эконом'
+        WHEN t.classs = 2 THEN 'Бизнес'
+        WHEN t.classs = 3 THEN 'Первый'
+        ELSE 'Неизвестно'
+    END AS класс
+FROM flit f
+-- Информация о самолете
+JOIN flyer fly ON f.id_flyer = fly.tail_number
+JOIN typess ts ON fly.id_type = ts.id_types
+-- Информация об аэропорте вылета
+JOIN airport dep_air ON f.id_departure_airport = dep_air.id_airport
+JOIN city dep_city ON dep_air.id_city = dep_city.id_city
+-- Информация об аэропорте прибытия
+JOIN airport arr_air ON f.id_landing_airport = arr_air.id_airport
+JOIN city arr_city ON arr_air.id_city = arr_city.id_city
+-- Информация о билетах и пассажирах
+JOIN ticket t ON f.id_flit = t.id_flit
+JOIN passenger p ON t.id_passenger = p.id_passenger
+ORDER BY f.id_flit;
+
+-- 20. Выбрать для каждого самолета дату последнего вылета.
+
+SELECT 
+    f.id_flyer AS бортовой_номер,
+    ts.description AS модель,
+    MAX(f.departure_date) AS дата_последнего_вылета
+FROM flit f
+JOIN flyer fly ON f.id_flyer = fly.tail_number
+JOIN typess ts ON fly.id_type = ts.id_types
+GROUP BY f.id_flyer, ts.description;
+
+-- до 20 всё принято
+
+/*21. Выбрать фамилию, имя, отчество пассажира, паспортные
+данные, количество мест багажа. В результат включить только
+пассажиров рейса N (значение подставьте сами). */
+
+SELECT 
+    p.surname AS фамилия,
+    p.namee AS имя,
+    p.surname2 AS отчество,
+    p.passport_serial AS серия_паспорта,
+    p.passport_number AS номер_паспорта,
+    COUNT(b.id_baggage) AS количество_мест_багажа
+FROM passenger p
+JOIN ticket t ON p.id_passenger = t.id_passenger
+LEFT   JOIN baggage b ON t.id_ticket = b.id_ticket
+WHERE t.id_flit = 1
+GROUP BY 
+    p.id_passenger,
+    p.surname,
+    p.namee,
+    p.surname2,
+    p.passport_serial,
+    p.passport_number;
+--ORDER BY p.surname, p.namee;
+
+/*22. Выбрать названия городов, в которых несколько аэропортов.
+Результат отсортировать по количеству аэропортов в убывающем порядке. */
+
+SELECT 
+    c.name_city AS город,
+    COUNT(a.id_airport) AS количество_аэропортов
+FROM city c
+JOIN airport a ON c.id_city = a.id_city
+GROUP BY c.id_city, c.name_city
+HAVING COUNT(a.id_airport) > 1
+ORDER BY количество_аэропортов DESC;
+
+/*23. Выбрать название российского города, в котором только
+один аэропорт, но из которого вылетает более N рейсов ежедневно.*/
+
+
+SELECT 
+    c.name_city AS город
+FROM city c
+JOIN countrie cnt ON c.countrie_id = cnt.id_countrie
+JOIN airport a ON c.id_city = a.id_city
+JOIN flit f ON a.id_airport = f.id_departure_airport
+WHERE cnt.name_countrie = 'Россия'
+  AND c.id_city IN (
+      -- Города с только одним аэропортом
+      SELECT a2.id_city 
+      FROM airport a2
+      GROUP BY a2.id_city
+      HAVING COUNT(*) = 1
+  )
+GROUP BY c.id_city, c.name_city, f.departure_date::date
+HAVING COUNT(f.id_flit) > 1  -- Более N рейсов ежедневно (N=1)
+ORDER BY c.name_city;
+
+/*24. Выбрать фамилии, имена, отчества и паспортные данные
+пассажиров, которые сделали более двух международных перелетов за один день.
+Результат отсортировать по фамилии, имени, отчеству в лексикографическом порядке.*/
+
+SELECT 
+    p.surname AS фамилия,
+    p.namee AS имя,
+    p.surname2 AS отчество,
+    p.passport_serial AS серия_паспорта,
+    p.passport_number AS номер_паспорта,
+    DATE(f.departure_date) AS дата_вылета,
+    COUNT(f.id_flit) AS количество_международных_рейсов /*DISTINCT*/
+FROM passenger p
+JOIN ticket t ON p.id_passenger = t.id_passenger
+JOIN flit f ON t.id_flit = f.id_flit
+-- Проверяем, что рейс международный
+JOIN airport dep_air ON f.id_departure_airport = dep_air.id_airport
+JOIN airport arr_air ON f.id_landing_airport = arr_air.id_airport
+JOIN city dep_city ON dep_air.id_city = dep_city.id_city
+JOIN city arr_city ON arr_air.id_city = arr_city.id_city
+JOIN countrie dep_cnt ON dep_city.countrie_id = dep_cnt.id_countrie
+JOIN countrie arr_cnt ON arr_city.countrie_id = arr_cnt.id_countrie
+WHERE dep_cnt.name_countrie != arr_cnt.name_countrie
+GROUP BY 
+    p.id_passenger,
+    p.surname,
+    p.namee,
+    p.surname2,
+    p.passport_serial,
+    p.passport_number,
+    DATE(f.departure_date)
+HAVING COUNT(f.id_flit) > 2  -- Более двух международных перелетов за день /*DISTINCT*/
+ORDER BY p.surname, p.namee, p.surname2;
+
+/*25. Выбрать названия всех стран и всех городов соответствующей
+страны и, если в город есть рейс сегодня, то номер рейса. */
+
+SELECT 
+    cnt.name_countrie AS страна,
+    c.name_city AS город,
+    CASE 
+        WHEN f.id_flit IS NOT NULL THEN CAST(f.id_flit AS VARCHAR)
+        ELSE 'Нет рейсов сегодня'
+    END AS номер_рейса_сегодня
+FROM countrie cnt
+LEFT JOIN city c ON cnt.id_countrie = c.countrie_id
+LEFT JOIN airport a ON c.id_city = a.id_city   
+LEFT JOIN flit f ON a.id_airport = f.id_departure_airport 
+    AND DATE(f.departure_date) = CURRENT_DATE
+ORDER BY cnt.name_countrie, c.name_city;
+
+/*26. Выбрать все данные всех рейсов и, если есть проданные
+билеты на соответствующий рейс, то их количество. */
+
+SELECT 
+    f.*,
+    COUNT(t.id_ticket) AS количество_проданных_билетов
+FROM flit f
+LEFT JOIN ticket t ON f.id_flit = t.id_flit
+GROUP BY 
+    f.id_flit, 
+    f.departure_date, 
+    f.arrival_date, 
+    f.id_crew, 
+    f.id_departure_airport, 
+    f.id_landing_airport, 
+    f.id_flyer
+ORDER BY f.id_flit;
+
+/*27. Выбрать все данные рейса, на который стоимость билета
+превышает среднюю стоимость билетов. */
+
+SELECT DISTINCT f.*
+FROM flit f
+JOIN ticket t ON f.id_flit = t.id_flit
+WHERE t.price > (SELECT AVG(price) FROM ticket t)
+ORDER BY f.id_flit;
+
+/*28. Выбрать все данные рейса, на борту которого летал самый пожилой человек. */
+
+--первый и второй этаж селектов сократить (подзапросы)
+
+SELECT DISTINCT f.*
+FROM flit f
+JOIN ticket t ON f.id_flit = t.id_flit
+JOIN passenger p ON t.id_passenger = p.id_passenger
+WHERE p.data_of_birth = (SELECT MIN(data_of_birth) FROM passenger);
+
+/*29. Выбрать месяц, в котором рождено больше всего людей.*/
+ --больше или равно all + CTE
+
+WITH все_люди AS (
+    SELECT data_of_birth FROM employee
+    UNION ALL
+    SELECT data_of_birth FROM passenger
+),
+месяцы_статистика AS (
+    SELECT 
+        EXTRACT(MONTH FROM data_of_birth) AS месяц,
+        COUNT(*) AS количество
+    FROM все_люди
+    WHERE data_of_birth IS NOT NULL
+    GROUP BY EXTRACT(MONTH FROM data_of_birth)
+)
+SELECT месяц
+FROM месяцы_статистика
+WHERE количество >= ALL (SELECT количество FROM месяцы_статистика)
+ORDER BY месяц;
+
+
+
+/*30. Выбрать страну, не имеющую аэропорта. */
+
+SELECT c.name_countrie AS страна
+FROM countrie c
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM city ci
+    JOIN airport a ON ci.id_city = a.id_city
+    WHERE ci.countrie_id = c.id_countrie
+)
+--ORDER BY c.name_countrie;
+
+/*31. Выбрать названия стран, в которых есть города с двумя
+аэропортами и более. */
+
+SELECT 
+	c.name_countrie AS страна
+FROM countrie c
+WHERE EXISTS 
+		(SELECT 1
+		 FROM city ci
+		 WHERE c.id_countrie = ci.countrie_id
+	     AND EXISTS
+		 		(SELECT 1
+			  	 FROM airport a
+				 WHERE a.id_city = ci.id_city
+				 GROUP BY a.id_city
+				 HAVING COUNT(*) >= 2
+				)
+		);
+
+/*32. Выбрать экипаж, который побывал во всех российских
+городах. 
+*/
+
+WITH российские_города_с_аэропортами AS (
+    -- Уникальные российские города, имеющие аэропорт
+    SELECT DISTINCT ci.id_city
+    FROM city ci
+    JOIN countrie cnt ON ci.countrie_id = cnt.id_countrie
+    JOIN airport a ON ci.id_city = a.id_city
+    WHERE cnt.name_countrie = 'Россия'
+)
+SELECT 
+    f.id_crew AS номер_экипажа,
+    COUNT(DISTINCT a.id_city) AS посещено_городов
+FROM flit f
+JOIN airport a ON f.id_landing_airport = a.id_airport
+WHERE a.id_city IN (SELECT id_city FROM российские_города_с_аэропортами)
+GROUP BY f.id_crew
+HAVING COUNT(DISTINCT a.id_city) = (
+    SELECT COUNT(*) FROM российские_города_с_аэропортами
+)
+ORDER BY f.id_crew;
+
+--избавиться в 33 строке от подзапроса через соединение WHERE a.id_city IN (SELECT id_city FROM российские_города_с_аэропортами)
+
+/*33. Выбрать названия всех стран, всех городов соответствующей страны и, если в городе есть аэропорт, то его код, если
+аэропорт международный, то в одном столбце с кодом указать
+«международный». 
+*/
+
+WITH международные_аэропорты AS (
+    SELECT /**/ a.id_airport
+    FROM airport a
+    WHERE EXISTS (
+        SELECT 1
+        FROM flit f
+        JOIN airport a_dep ON f.id_departure_airport = a_dep.id_airport
+        JOIN airport a_arr ON f.id_landing_airport = a_arr.id_airport
+        JOIN city ci_dep ON a_dep.id_city = ci_dep.id_city
+        JOIN city ci_arr ON a_arr.id_city = ci_arr.id_city
+        WHERE (a.id_airport = f.id_departure_airport OR a.id_airport = f.id_landing_airport)
+          AND ci_dep.countrie_id != ci_arr.countrie_id
+    )
+)
+SELECT 
+    cnt.name_countrie AS страна,
+    ci.name_city AS город,
+    CASE 
+        WHEN a.id_airport IS NULL THEN 'Нет аэропорта'
+        WHEN ma.id_airport IS NOT NULL THEN a.name_airport || ' (международный)'
+        ELSE a.name_airport
+    END AS аэропорт
+FROM countrie cnt
+LEFT JOIN city ci ON cnt.id_countrie = ci.countrie_id
+LEFT JOIN airport a ON ci.id_city = a.id_city
+LEFT JOIN международные_аэропорты ma ON a.id_airport = ma.id_airport
+ORDER BY cnt.name_countrie, ci.name_city, a.name_airport;
+-- придумать оптимизацию на курс оптимизации
+
+
+/*34. Выбрать для каждого человека все посещенные страны.
+Результат отсортировать по фамилии, имени, отчеству и названию
+страны.
+*/
+
+SELECT 
+    p.surname AS фамилия,
+    p.namee AS имя,
+    p.surname2 AS отчество,
+    cnt_arr.name_countrie AS страна_посещения,
+    'пассажир' AS тип_человека
+FROM passenger p
+JOIN ticket t ON p.id_passenger = t.id_passenger
+JOIN flit f ON t.id_flit = f.id_flit
+JOIN airport a_arr ON f.id_landing_airport = a_arr.id_airport
+JOIN city ci_arr ON a_arr.id_city = ci_arr.id_city
+JOIN countrie cnt_arr ON ci_arr.countrie_id = cnt_arr.id_countrie
+
+UNION ALL
+
+SELECT 
+    e.surename_employee AS фамилия,
+    e.name_employee AS имя,
+    e.surename2_employee AS отчество,
+    cnt_arr.name_countrie AS страна_посещения,
+    'сотрудник' AS тип_человека
+FROM employee e
+JOIN compount_sostav cs ON e.id_employee = cs.id_employee
+JOIN flit f ON cs.id_crew = f.id_crew
+JOIN airport a_arr ON f.id_landing_airport = a_arr.id_airport
+JOIN city ci_arr ON a_arr.id_city = ci_arr.id_city
+JOIN countrie cnt_arr ON ci_arr.countrie_id = cnt_arr.id_countrie
+
+ORDER BY фамилия, имя, отчество, страна_посещения;
+
+--дистинкт
+
+
+/*35. Выбрать для каждого человека все страны и, если
+человек летал в соответствующую страну, то в последнем столбце
+указать «+». Результат отсортировать по фамилии, имени, отчеству и
+названию страны. */
+
+-- Все люди со всеми странами и отметкой "+"
+SELECT 
+    p.surname AS фамилия,
+    p.namee AS имя,
+    p.surname2 AS отчество,
+    cnt.name_countrie AS страна,
+    CASE 
+        WHEN EXISTS (
+            SELECT 1
+            FROM ticket t
+            JOIN flit f ON t.id_flit = f.id_flit
+            JOIN airport a_arr ON f.id_landing_airport = a_arr.id_airport
+            JOIN city ci_arr ON a_arr.id_city = ci_arr.id_city
+            JOIN countrie cnt2 ON ci_arr.countrie_id = cnt2.id_countrie
+            WHERE t.id_passenger = p.id_passenger
+              AND cnt2.name_countrie = cnt.name_countrie
+        ) THEN '+'
+        ELSE ''
+    END AS посещал
+FROM passenger p, countrie cnt
+
+UNION ALL
+
+SELECT 
+    e.surename_employee AS фамилия,
+    e.name_employee AS имя,
+    e.surename2_employee AS отчество,
+    cnt.name_countrie AS страна,
+    CASE 
+        WHEN EXISTS (
+            SELECT 1
+            FROM compount_sostav cs
+            JOIN flit f ON cs.id_crew = f.id_crew
+            JOIN airport a_arr ON f.id_landing_airport = a_arr.id_airport
+            JOIN city ci_arr ON a_arr.id_city = ci_arr.id_city
+            JOIN countrie cnt2 ON ci_arr.countrie_id = cnt2.id_countrie
+            WHERE cs.id_employee = e.id_employee
+              AND cnt2.name_countrie = cnt.name_countrie
+        ) THEN '+'
+        ELSE ''
+    END AS посещал
+FROM employee e, countrie cnt
+
+ORDER BY фамилия, имя, отчество, страна;
+
+/*36. Выбрать пассажиров, которые вылетают всегда из одной
+и той же страны.
+*/
+
+SELECT 
+    p.id_passenger,
+    p.surname AS фамилия,
+    p.namee AS имя,
+    p.surname2 AS отчество
+FROM passenger p
+JOIN ticket t ON p.id_passenger = t.id_passenger
+JOIN flit f ON t.id_flit = f.id_flit
+JOIN airport a ON f.id_departure_airport = a.id_airport
+JOIN city ci ON a.id_city = ci.id_city
+JOIN countrie cnt ON ci.countrie_id = cnt.id_countrie
+GROUP BY p.id_passenger, p.surname, p.namee, p.surname2
+HAVING COUNT(DISTINCT cnt.id_countrie) = 1
+ORDER BY p.surname, p.namee, p.surname2;
+
+/*37. Выбрать все данные рейса, на который самые дорогие
+билеты.*/
+SELECT f.*
+FROM flit f
+WHERE EXISTS (
+    SELECT 1
+    FROM ticket t
+    WHERE t.id_flit = f.id_flit
+      AND t.price = (SELECT MAX(price) FROM ticket)
+)
+ORDER BY f.id_flit;
+
+
+
